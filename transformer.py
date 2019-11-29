@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-#########################################################################################
-#                                                                                       #
-#   CODE BY: JESSY LIAO                                                                 #
-#   CSCI470: FINAL PROJECT                                                              #
-#                                                                                       #
-#########################################################################################
+###########################################################################################
+#                                                                                         #
+#   CODE BY: JESSY LIAO                                                                   #
+#   CSCI470: FINAL PROJECT                                                                #
+#                                                                                         #
+###########################################################################################
 
 # For Transformer, Encoder, Decoder
 import sys
@@ -20,6 +20,13 @@ import torch.autograd import Variable
 # For MultiHeadedAttention
 import torch.nn.functional as F
 
+###########################################################################################
+#                                                                                       
+# MODEL
+#                                                                                       
+###########################################################################################
+
+# MAIN: Transformer class, calls all other class objects
 class Transformer(nn.Module):
     """
     paramters:
@@ -85,6 +92,12 @@ class Decoder(nn.Module):
  class get_clones(module, N):
      return nnModuleList([copy.deepcopy(module) for i in range(N)])
 
+###########################################################################################
+#                                                                                       
+# EMBED
+#                                                                                       
+###########################################################################################
+
 class Embedder(nn.Module):
     """
     parameters:
@@ -135,21 +148,11 @@ class PositionalEncoder(nn.Module):
         x = x + pe
         return self.dropout(x)
 
-class Norm(nn.Module): 
-    def __init__(self, d_model, eps = 1e-6)
-        super().__init__()
-
-        self.size = d_model
-
-        # create two learnable parameters to calibrate normalization 
-        self.alpha = nn.Parameter(torch.ones(self.size))
-        self.bias = nn.Parameter(torch.zeros(self.size))
-
-        self.eps = eps
-
-    def forward(self, x):
-        norm = self.alpha * (x - x.mean(dim=-1, keepdim=True)) / (x.std(dim=-1, keepdimTrue=True) + self.eps) + self.bias)
-        return norm
+###########################################################################################
+#                                                                                       
+# LAYERS
+#                                                                                       
+###########################################################################################
 
 class EncoderLayer(nn.Module):
     """
@@ -212,6 +215,12 @@ class DecoderLayer(nn.Module):
 
         return x # this is an embedding vector (now we know what the word means)
 
+###########################################################################################
+#                                                                                       
+# SUB LAYERS
+#                                                                                       
+###########################################################################################
+
 # This is just the math to calculate attention (This is a helper method for MultiHeadedAttention)
 def attention(q, k, v, d_k, mask=None, dropout=None):
     
@@ -270,6 +279,24 @@ class MultiHeadAttention(nn.Module):
         output = self.out(concat)
 
         return output
+
+class Norm(nn.Module): 
+    def __init__(self, d_model, eps = 1e-6)
+        super().__init__()
+
+        self.size = d_model
+
+        # create two learnable parameters to calibrate normalization 
+        self.alpha = nn.Parameter(torch.ones(self.size))
+        self.bias = nn.Parameter(torch.zeros(self.size))
+
+        self.eps = eps
+
+    def forward(self, x):
+        norm = self.alpha * (x - x.mean(dim=-1, keepdim=True)) / (x.std(dim=-1, keepdimTrue=True) + self.eps) + self.bias)
+        return norm
+
+
 
 class FeedForward(nn.Module): 
     def __init__(self, d_model, d_ff=2048, dropout=0.1): 
