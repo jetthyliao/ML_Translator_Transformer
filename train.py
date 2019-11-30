@@ -55,9 +55,9 @@ def read_file(options):
         
         for line in file_lines:
             split_line = line.split('\t')
-            print(split_line[0])
-            print(split_line[1])
-            print()
+            #print(split_line[0])
+            #print(split_line[1])
+            #print()
             source_column.append(split_line[0])
             target_column.append(split_line[1])
         return (source_column, target_column)
@@ -305,16 +305,15 @@ def train_model(options, model):
             predictions = model(source, target_input, source_mask, target_mask)
             ys = target[:, 1:].contiguous().view(-1)
             options['optimizer'].zero_grad()
-            loss = F.cross_entropy(predictions.view(-1, predictions.size(-1)), ys, ignore_index=options['target_pad'])
+            loss = F.cross_entropy(predictions.view(-1, predictions.size(-1)), ys, ignore_index=options['target_pad_index'])
             loss.backward()
             options['optimizer'].step()
             if options['SGDR'] == True: 
                 options['sched'].step()
             
             total_loss += loss.item()
-            
             if (i + 1) % options['printevery'] == 0:
-                p = int(100 * (i + 1) / options['train_len'])
+                p = int(100 * (i + 1) / options['train_length'])
                 avg_loss = total_loss/options['printevery']
                 print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" % ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_loss), end='\r')
                 total_loss = 0
@@ -338,7 +337,7 @@ def main(argv):
         weight_path = None
     elif len(argv) == 3:
         data_filename = argv[1]
-        weights_path = argv[2]
+        weight_path = argv[2]
     else:
         print('Usage: %s [input_file]' % argv[0])
         sys.exit(0)
@@ -354,10 +353,10 @@ def main(argv):
                "heads"			: 8,
                "dropout"		: 0.1,
                "batchsize"		: 1500,
-               "printevery"		: 100,
+               "printevery"		: 2,
                "lr"			: 0.0001,
                "max_string_length"	: 80,
-               "checkpoint"		: 0,
+               "checkpoint"		: 5,
                "device"			: 1,
                "weight_path"            : weight_path,
                "SGDR"                   : 'store_true'}
@@ -378,15 +377,14 @@ def main(argv):
     if options["SGDR"] == True: 
         print("something")
 
-    if options["weight_path"] is not None:
-        os.mkdir('weights')
-        pickle.dump(SOURCE, open('weights/SOURCE.pk;', 'wb'))
-        pickle.dump(TARGET, open('weights/TARGET.pk;', 'wb'))
+    #print("main")
+    #print(options['weight_path'])
+    #if options["weight_path"]:
+        #os.mkdir('weights')
+        #pickle.dump(SOURCE, open('weights/SOURCE.pk;', 'wb'))
+        #pickle.dump(TARGET, open('weights/TARGET.pk;', 'wb'))
 
     train_model(options, model)
-
-    sys.exit(1)
-
 
 if __name__ == '__main__':
     main(sys.argv)

@@ -42,7 +42,7 @@ class Transformer(nn.Module):
         self.encoder = Encoder(source_vocab_size, d_model, N, heads, dropout)
         self.decoder = Decoder(target_vocab_size, d_model, N, heads, dropout) 
         self.out = nn.Linear(d_model, target_vocab_size)
-    
+
     """
     parameters:
         - source: ???
@@ -51,6 +51,9 @@ class Transformer(nn.Module):
         - target_mask: ???
     """
     def forward(self, source, target, source_mask, target_mask):
+        if source is None:
+            print("transformer")
+            quit()
         e_outputs = self.encoder(source, source_mask)
         d_output = self.decoder(target, e_outputs, source_mask, target_mask)
         
@@ -67,6 +70,9 @@ class Encoder(nn.Module):
         self.layers = get_clones(EncoderLayer(d_model, heads, dropout), N) # Get N copy of layer
         self.norm = Norm(d_model) # Normalize: calibrate data for every iteration of layer
     def forward(self, source, mask):
+        if source is None:
+            print("encoder")
+            quit()
         x = self.embed(source)
         x = self.pe(x)
         for i in range(self.N):
@@ -109,6 +115,9 @@ class Embedder(nn.Module):
         self.d_model = d_model
         self.embed = nn.Embedding(vocab_size, d_model) # Torch Class
     def forward(self, x):
+        if x is None:
+            print("embedder")
+            quit()
         return self.embed(x)
 
 class PositionalEncoder(nn.Module):
@@ -138,6 +147,9 @@ class PositionalEncoder(nn.Module):
         self.register_buffer('pe',pe)
 
     def forward(self, x):
+        if x is None:
+            print("pe")
+            quit()
         # make the embedding relatively larger (this is so meaning of the word has more impact than the position of the word in the sentence. 
         x = x * math.sqrt(self.d_model)
 
@@ -177,10 +189,14 @@ class EncoderLayer(nn.Module):
         self.dropout_2 = nn.Dropout(dropout)
 
     def forward(self, x, mask):
+        if x is None:
+            print("encoderlayer")
+            quit()
         x2 = self.norm_1(x)
         x = x + self.dropout_1(self.attn(x2,x2,x2,mask))
         x2 = self.norm_2(x)
         x = x + self.dropout_2(self.ff(x2))
+        return x
 
 class DecoderLayer(nn.Module):
     def __init__(self, d_model, heads, dropout=0.1):
@@ -205,11 +221,14 @@ class DecoderLayer(nn.Module):
         self.ff = FeedForward(d_model, dropout=dropout)
 
     def forward(self, x, e_output, source_mask, target_mask): 
+        if x is None:
+            print("decoderlayer")
+            quit()
         x2 = self.norm_1(x)
         x = x + self.dropout_1(self.attn_1(x2, x2, x2, target_mask))
 
         x2 = self.norm_2(x)
-        x = x + self.dropout_2(self.attn_2(x2, e_ouputs, e_outputs, source_mask))
+        x = x + self.dropout_2(self.attn_2(x2, e_output, e_output, source_mask))
 
         x2 = self.norm_3(x)
         x = x + self.dropout_3(self.ff(x2))
@@ -294,6 +313,9 @@ class Norm(nn.Module):
         self.eps = eps
 
     def forward(self, x):
+        if x is None:
+            print("norm")
+            quit()
         norm = self.alpha * (x - x.mean(dim=-1, keepdim=True)) / (x.std(dim=-1, keepdim=True) + self.eps) + self.bias
         return norm
 
@@ -310,6 +332,9 @@ class FeedForward(nn.Module):
         self.linear_2 = nn.Linear(d_ff, d_model)
 
     def forward(self, x):
+        if x is None:
+            print("ff")
+            quit()
         # Performs reul calculation and linearizes that value and returns it
         x = self.dropout(F.relu(self.linear_1(x)))
         x = self.linear_2(x)
