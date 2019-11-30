@@ -15,7 +15,7 @@ import copy
 
 # For Embedder, PositionalEncoder
 import math
-import torch.autograd import Variable
+from torch.autograd import Variable
 
 # For MultiHeadedAttention
 import torch.nn.functional as F
@@ -40,7 +40,7 @@ class Transformer(nn.Module):
     def __init__(self, source_vocab_size, target_vocab_size, d_model, N, heads, dropout):
         super().__init__()
         self.encoder = Encoder(source_vocab_size, d_model, N, heads, dropout)
-        self.decoder = decoder(target_vocab_size, d_model, N, heads, dropout) 
+        self.decoder = Decoder(target_vocab_size, d_model, N, heads, dropout) 
         self.out = nn.Linear(d_model, target_vocab_size)
     
     """
@@ -63,7 +63,7 @@ class Encoder(nn.Module):
         super().__init__()
         self.N = N 
         self.embed = Embedder(vocab_size, d_model) # Embedding layer: (meaning of word)
-        self.pe = PositonalEncoder(d_model, dropout=dropout) # PE layer: (position in sentence)
+        self.pe = PositionalEncoder(d_model, dropout=dropout) # PE layer: (position in sentence)
         self.layers = get_clones(EncoderLayer(d_model, heads, dropout), N) # Get N copy of layer
         self.norm = Norm(d_model) # Normalize: calibrate data for every iteration of layer
     def forward(self, source, mask):
@@ -79,18 +79,18 @@ class Decoder(nn.Module):
         super().__init__()
         self.N = N
         self.embed = Embedder(vocab_size, d_model) 
-        self.pe = PositonalEncoder(d_model, dropout=dropout)
+        self.pe = PositionalEncoder(d_model, dropout=dropout)
         self.layers = get_clones(DecoderLayer(d_model, heads, dropout), N)
         self.norm = Norm(d_model)
-    def forward(self, target, e_outputs, source_ mask, target_mask):
+    def forward(self, target, e_outputs, source_mask, target_mask):
         x = self.embed(target)
         x = self.pe(x)
         for i in range(self.N):
             x = self.layers[i](x, e_outputs, source_mask, target_mask)
         return self.norm(x)
  
- class get_clones(module, N):
-     return nnModuleList([copy.deepcopy(module) for i in range(N)])
+def get_clones(module, N):
+     return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
 
 ###########################################################################################
 #                                                                                       
@@ -105,6 +105,7 @@ class Embedder(nn.Module):
         - d_model: dimension of the word embedding vector
     """
     def __init__(self, vocab_size, d_model):
+        super().__init__()
         self.d_model = d_model
         self.embed = nn.Embedding(vocab_size, d_model) # Torch Class
     def forward(self, x):
@@ -143,7 +144,7 @@ class PositionalEncoder(nn.Module):
         # add constant to embedding ???
         seq_len = x.size(1)
         pe = Variable(self.pe[:,:seq_len], requires_grad=False)
-        if x.is_cude:
+        if x.is_cuda:
             pe.cuda()
         x = x + pe
         return self.dropout(x)
@@ -244,7 +245,7 @@ class MultiHeadAttention(nn.Module):
 
         # variables used for the attention function
         self.d_model = d_model
-        self.d_k = d_model // head
+        self.d_k = d_model // heads
         self.h = heads
 
         # each of these represent a word
@@ -281,7 +282,7 @@ class MultiHeadAttention(nn.Module):
         return output
 
 class Norm(nn.Module): 
-    def __init__(self, d_model, eps = 1e-6)
+    def __init__(self, d_model, eps = 1e-6):
         super().__init__()
 
         self.size = d_model
@@ -293,7 +294,7 @@ class Norm(nn.Module):
         self.eps = eps
 
     def forward(self, x):
-        norm = self.alpha * (x - x.mean(dim=-1, keepdim=True)) / (x.std(dim=-1, keepdimTrue=True) + self.eps) + self.bias)
+        norm = self.alpha * (x - x.mean(dim=-1, keepdim=True)) / (x.std(dim=-1, keepdim=True) + self.eps) + self.bias
         return norm
 
 
