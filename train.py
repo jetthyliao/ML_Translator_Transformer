@@ -1,56 +1,31 @@
 #!/usr/bin/env python
 
 #########################################################################################
-#																						#
-#	CODE BY: JESSY LIAO / JOSEPH KIM / COURTNEY RICHARDSON / MATT CLOUGH				  #
-#	CSCI470: FINAL PROJECT																#
-#																						#
+#   	    										#
+#   CODE BY: JESSY LIAO / JOSEPH KIM / COURTNEY RICHARDSON / MATT CLOUGH                #
+#   CSCI470: FINAL PROJECT				    				#
+#   											#
 #########################################################################################
 
 import sys
 import os
-# import time
-# import torch
-# from Models import get_model
-# from Process import *
-# import torch.nn.functional as F
-# from Optim import CosineWithRestarts
-# from Batch import create_masks
-# import dill as pickle
 
-# MAIN: calls all other functions 
-def main(argv):
+import spacy
+import re
+import time
+import torch
+#from Models import get_model
+#from Process import *
+import torch.nn.functional as F
+#from Optim import CosineWithRestarts
+#from Batch import create_masks
+import dill as pickle
 
-	input_file = ""
+import pandas as pd
+import torchtext
+from torchtext import data
+#from Batch import MyIterator, batch_size_fn
 
-	# Read in arguments, sets inputfile
-	if len(argv) != 2:
-		print('Usage: %s [input_file]' % argv[0])
-		sys.exit(0)
-	else:
-		data_filename = argv[1]
-	
-	options = {"data_filename"		: data_filename,
-				"source_language"	: "en",
-				"target_languag"	: "de",
-				"epochs"			: 2,
-				"d_model"			: 512,
-				"n_layers"			: 6,
-				"heads"				: 8,
-				"dropout"			: 0.1,
-				"batchsize"			: 1500,
-				"printevery"		: 100,
-				"lr"				: 0.0001,
-				"max_strlen"		: 80,
-				"checkpoint"		: 0,
-				"device"			: 1}
-
-	# if torch.cuda.is_available():
-		# options["device"] = 0
-
-	source_column, target_column = read_file(options)
-
-	sys.exit(1)
 
 ########################################################################################
 """
@@ -63,24 +38,23 @@ Process Data: (for both source and target data)
 	- split newlines
 """
 def read_file(options):
-	try:		
-		file_lines = open(options["data_filename"], 'r').read().strip().split('\n')
-		
-		source_column = []
-		target_column = []
-		
-		for line in data_lines:
-			split_line = line.split('\t')
-			print(split_line[0])
-			print(split_line[1])
-			print()
-			source_column.append(split_line[0])
-			target_column.append(split_line[1])
-			
-		return (source_column, target_column)
-	except:
-		print("error: '" + options["data_filename"] + "' file not found")
-		quit()
+    try:		
+        file_lines = open(options["data_filename"], 'r').read().strip().split('\n')
+
+        source_column = []
+        target_column = []
+        
+        for line in file_lines:
+            split_line = line.split('\t')
+            print(split_line[0])
+            print(split_line[1])
+            print()
+            source_column.append(split_line[0])
+            target_column.append(split_line[1])
+        return (source_column, target_column)
+    except:
+        print("error: '" + options["data_filename"] + "' file not found")
+        quit()
 	
 #######################################################################################
 """
@@ -99,6 +73,41 @@ If existing data, load existing data (Uses pickle). This overwrites the above co
 	- load_weights is the path to the pkl file 
 	- this is old weight data to use if we have weights available
 """
+class Tokenize(object):
+    def __init__(self, lang):
+        self.nlp = spacy.load(lang)
+    
+    def tokenizer(spacy_load, sentence):
+        sentence = re.sub(
+            r"[\*\"“”\n\\…\+\-\/\=\(\)‘•:\[\]\|’\!;]", " ", str(sentence))
+        sentence = re.sub(r"[ ]+", " ", sentence)
+        sentence = re.sub(r"\!+", "!", sentence)
+        sentence = re.sub(r"\,+", ",", sentence)
+        sentence = re.sub(r"\?+", "?", sentence)
+        sentence = sentence.lower() 
+        return [token.text for token in space_load.tokenizer(sentence) if token.text != " "]
+
+def create_fields(options):
+
+    print("LOADING TOKENIZER -BEEP BOOP-")
+
+    t_source = Tokenize(options["source_language"])
+    t_target = Tokenize(options["target_language"])
+
+    TARGET = data.Field(lower = True, tokenize=t_target.tokenizer, init_token='<sos>', eos_token='<eos>')
+    SOURCE = data.Field(lower = True, tokenize=t_source.tokenizer)
+
+    if options["load_weights"] is not None:
+        try:
+            print("LOADING OLD FIELDS -BING BOTT-")
+            TARGET = pickle.load(open(f'{option["load_weights"]}/TARGET.pkl', 'rb'))
+            SOURCE = pickle.load(open(f'{option["load_weights"]}/SOURCE.pkl', 'rb'))
+        except:
+            print("error opening SOURCE and TARGET pickles, please ferment cucumber longer")
+    
+    return (SOURCE, TARGET)
+ 
+
 #######################################################################################
 """
 CREATE DATASET: create datseta and iterator
@@ -148,5 +157,51 @@ get_model(opt, len(source vocab), len(target vocab))
 	- 
 """
 
+# MAIN: calls all other functions 
+def main(argv):
+
+    input_file = ""
+
+    # Read in arguments, sets inputfile
+    if len(argv) == 2:
+        data_filename = argv[1]
+        weight_path = None
+    elif len(argv) == 3:
+        data_filename = argv[1]
+        weights_path = argv[2]
+    else:
+        print('Usage: %s [input_file]' % argv[0])
+        sys.exit(0)
+ 
+    
+    options = {"data_filename"		: data_filename,
+               "source_data"            : {},
+               "target_data"            : {},
+               "source_language"	: "en",
+               "target_language"	: "de",
+               "epochs"			: 2,
+               "d_model"		: 512,
+               "n_layers"		: 6,
+               "heads"			: 8,
+               "dropout"		: 0.1,
+               "batchsize"		: 1500,
+               "printevery"		: 100,
+               "lr"			: 0.0001,
+               "max_strlen"		: 80,
+               "checkpoint"		: 0,
+               "device"			: 1,
+               "load_weights"           : weight_path}
+
+    if torch.cuda.is_available():
+        options["device"] = 0
+
+    options["source_data"], options["target_data"] = read_file(options)
+
+    SOURCE, TARGET = create_fields(options)   
+
+    sys.exit(1)
+
+
+
 if __name__ == '__main__':
-	main(sys.argv)
+    main(sys.argv)
