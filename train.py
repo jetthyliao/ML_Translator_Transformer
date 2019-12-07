@@ -1,9 +1,9 @@
 #########################################################################################
-#																						#
-#	CODE BY: JESSY LIAO / JOSEPH KIM / COURTNEY RICHARDSON / MATT CLOUGH				#
-#	BASE CODE FOUND HERE: https://github.com/SamLynnEvans/Transformer					#
-#	CSCI470: FINAL PROJECT																#
-#																						#
+#											#
+#	CODE BY: JESSY LIAO / JOSEPH KIM / COURTNEY RICHARDSON / MATT CLOUGH		#
+#	BASE CODE FOUND HERE: https://github.com/SamLynnEvans/Transformer		#
+#	CSCI470: FINAL PROJECT								#
+#											#
 #########################################################################################
 import sys
 import os
