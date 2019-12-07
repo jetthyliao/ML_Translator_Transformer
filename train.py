@@ -322,7 +322,7 @@ def main(argv):
 				"target_data"		: {},
 				"source_language"	: "en",
 				"target_language"	: "de",
-				"epochs"			: 10,
+				"epochs"			: 1,
 				"d_model"			: 512,
 				"n_layers"			: 6,
 				"heads"				: 8,

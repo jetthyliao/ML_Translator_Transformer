@@ -110,64 +110,63 @@ def beam_search(src, model, SRC, TRG, opt):
 #######################################################################################
 # MAIN: calls all other functions 
 def main(argv):
-	options = {'weight_path'            : 'weights',
-				'source_language'       : 'en',
-				'target_language'       : 'de',
-				'k'						: 3,
-				'max_length' 			: 80,
-				"d_model"				: 512,
-				"n_layers"				: 6,
-				"heads"					: 8,
-				"dropout"				: 0.1,
-				'device'                : 1 }
+    # read in source language text file
+    if len(argv) == 2:
+        source_filename = argv[1]
+    else:
+        print('Usage: %s [source_language_text_file]' % argv[0])
+        sys.exit(0)
+    
+    options = {'weight_path'            : 'weights',
+                'source_language'       : 'en',
+                'target_language'       : 'de',
+                'k'			: 3,
+                'max_length' 	        : 80,
+                "d_model"		: 512,
+                "n_layers"	    	: 6,
+                "heads"			: 8,
+                "dropout"		: 0.1,
+                'device'                : 1 }
 
-	if torch.cuda.is_available():
-		options["device"] = 0
+    if torch.cuda.is_available():
+        options["device"] = 0
 
-	SOURCE, TARGET = create_fields(options)
-	model = get_model(options, len(SOURCE.vocab), len(TARGET.vocab))
-	
-	# test_sentence = 'provides a sample action list for use with job that are sent.'
-	# test_sentence = 'indicates.'                        # good
-	# test_sentence = 'I created some sample sentences for myself earlier today to practice and translate.'     # close
-	# test_sentence = 'They are English sentences, and they are for anyone who has learned'
-	# test_sentence = 'printer low on cyan, refill before printing more'
-	# test_sentence = 'printer low on black ink'
-	# test_sentence = 'low on paper, add more paper to continue'
-	# test_sentence = 'low on blue low on red printer'              # model doesn't seem to know the word low
-	# test_sentence = 'out of blue ink'         # perfect
-	# test_sentence = 'blue printer'            # perfect
-	# test_sentence = 'To go back to the main menu, click the back arrow in the upper left corner.'
-	# test_sentence = 'warning, tray two empty'             # not bad
-	# test_sentence = 'in the printer control panel, check the estimated ink levels of the ink cartridges'
+    with open(source_filename, 'r') as file:
+        file_lines = file.read().strip().split('\n')
 
-	# test_sentence = 'indicates if the printer is on'   # good
-	# test_sentence = 'CMR Processing Modes'              # good
-	test_sentence = 'this is an interesting translation tool not sure how well it will turn out however'     # close
+    # print(file_lines)
+    # sys.exit(0)
 
-	print('test_sentence: ' + test_sentence)
+    SOURCE, TARGET = create_fields(options)
+    model = get_model(options, len(SOURCE.vocab), len(TARGET.vocab))
+    
+    model.eval()
+    indexed = []
+    
+    translated_lines = []
 
-	model.eval()
-	indexed = []
-	sentence = SOURCE.preprocess(test_sentence)
+    for source_sentence in file_lines:
+        sentence = SOURCE.preprocess(source_sentence)
 
-	for token in sentence:
-		if SOURCE.vocab.stoi[token] != 0:
-			indexed.append(SOURCE.vocab.stoi[token])
-		else:
-			print(token)
-			print('oops')
-			quit()
-	sentence = Variable(torch.LongTensor([indexed]))
-	if options['device'] == 0:
-		sentence = sentence.cuda()
+        for token in sentence:
+            if SOURCE.vocab.stoi[token] != 0:
+                indexed.append(SOURCE.vocab.stoi[token])
+            else:
+                print(token)
+                print('oops')
+                quit()
+        sentence = Variable(torch.LongTensor([indexed]))
+        if options['device'] == 0:
+            sentence = sentence.cuda()
 
-	sentence = beam_search(sentence, model, SOURCE, TARGET, options)
+        sentence = beam_search(sentence, model, SOURCE, TARGET, options)
 
-	dictionary = {' ?' : '?',' !':'!',' .':'.','\' ':'\'',' ,':','}
-	regex = re.compile("(%s)" % "|".join(map(re.escape, dictionary.keys())))
-	print('translation: ' + str(regex.sub(lambda mo: dictionary[mo.string[mo.start():mo.end()]], sentence)))
+        dictionary = {' ?' : '?',' !':'!',' .':'.','\' ':'\'',' ,':','}
+        regex = re.compile("(%s)" % "|".join(map(re.escape, dictionary.keys())))
+        translated_lines.append(str(regex.sub(lambda mo: dictionary[mo.string[mo.start():mo.end()]], sentence)))
+
+   print('translation: ' + str(translated_lines))
 	
 
 if __name__ == '__main__':
-	main(sys.argv)
+    main(sys.argv)
