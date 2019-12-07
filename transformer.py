@@ -24,7 +24,7 @@ import torch.nn.functional as F
 #                                                                                       
 ###########################################################################################
 def get_clones(module, N):
-     return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
+    return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
 
 # MAIN: Transformer class, calls all other class objects
 class Transformer(nn.Module):
