@@ -141,11 +141,11 @@ def main(argv):
     model = get_model(options, len(SOURCE.vocab), len(TARGET.vocab))
     
     model.eval()
-    indexed = []
-    
+
     translated_lines = []
 
     for source_sentence in file_lines:
+        indexed = []
         sentence = SOURCE.preprocess(source_sentence)
 
         for token in sentence:
@@ -163,10 +163,15 @@ def main(argv):
 
         dictionary = {' ?' : '?',' !':'!',' .':'.','\' ':'\'',' ,':','}
         regex = re.compile("(%s)" % "|".join(map(re.escape, dictionary.keys())))
-        translated_lines.append(str(regex.sub(lambda mo: dictionary[mo.string[mo.start():mo.end()]], sentence)))
+        translated_line = str(regex.sub(lambda mo: dictionary[mo.string[mo.start():mo.end()]], sentence))
+        translated_lines.append(translated_line)
+        
+        print(source_sentence)
+        print(translated_line)
 
-   print('translation: ' + str(translated_lines))
-	
+    with open(source_filename.replace('.txt.', '') + '-de.txt', 'w') as file:
+        for line in translated_lines:
+            file.write(line)
 
 if __name__ == '__main__':
     main(sys.argv)
