@@ -1,3 +1,10 @@
+#########################################################################################
+#   	    																			#
+#   CODE BY: JESSY LIAO / JOSEPH KIM / COURTNEY RICHARDSON / MATT CLOUGH                #
+#   BASE CODE FOUND HERE: https://github.com/SamLynnEvans/Transformer                	#
+#   CSCI470: FINAL PROJECT				    											#
+#   																					#
+#########################################################################################
 import sys
 import re
 import math
@@ -8,6 +15,7 @@ import torch.nn.functional as F
 
 from train import nopeak_mask, create_fields, get_model
 
+########################################################################################
 def init_vars(src, model, SRC, TRG, opt): 
     init_tok = TRG.vocab.stoi['<sos>']
     src_mask = (src != SRC.vocab.stoi['<pad>']).unsqueeze(-2)
@@ -53,16 +61,15 @@ def k_best_outputs(outputs, out, log_scores, i, k):
     
     return outputs, log_scores
 
+
+#######################################################################################
 def beam_search(src, model, SRC, TRG, opt):
-    #print('start')
     outputs, e_outputs, log_scores = init_vars(src, model, SRC, TRG, opt)
     eos_tok = TRG.vocab.stoi['<eos>']
     src_mask = (src != SRC.vocab.stoi['<pad>']).unsqueeze(-2)
-    #print('next1')
     ind = None
+	
     for i in range(2, opt['max_length']):
-        #print('i: ' + str(i))
-
         trg_mask = nopeak_mask(opt, i)
 
         out = model.out(model.decoder(outputs[:,:i],
@@ -72,16 +79,16 @@ def beam_search(src, model, SRC, TRG, opt):
     
         outputs, log_scores = k_best_outputs(outputs, out, log_scores, i, opt['k'])
         
-        ones = (outputs==eos_tok).nonzero() # Occurrences of end symbols for all input sentences.
+        ones = (outputs==eos_tok).nonzero() 							# Occurrences of end symbols for all input sentences.
         sentence_lengths = torch.zeros(len(outputs), dtype=torch.long)
+		
         if opt['device'] == 0:
             sentence_lengths = sentence_lengths.cuda()
-        #print('sentence_lengths: ')
-        #print(sentence_lengths)
+			
         for vec in ones:
             i = vec[0]
-            if sentence_lengths[i]==0: # First end symbol has not been found yet
-                sentence_lengths[i] = vec[1] # Position of first end symbol
+            if sentence_lengths[i]==0: 									# First end symbol has not been found yet
+                sentence_lengths[i] = vec[1] 							# Position of first end symbol
 
         num_finished_sentences = len([s for s in sentence_lengths if s > 0])
 
@@ -92,74 +99,75 @@ def beam_search(src, model, SRC, TRG, opt):
             ind = ind.data[0]
             break
     
-    #print('next2')
     if ind is None:
-        #print("ind")
         length = (outputs[0]==eos_tok).nonzero()[0]
-        #print(length)
         return ' '.join([TRG.vocab.itos[tok] for tok in outputs[0][1:length]])
-    
     else:
-        #print("not ind")
         length = (outputs[ind]==eos_tok).nonzero()[0]
-        #print(length)
-        #print(outputs)
-        #print([tok for tok in outputs[ind][1:length]])
-        #print("before return")
         return ' '.join([TRG.vocab.itos[tok] for tok in outputs[ind][1:length]])
 
+
+#######################################################################################
+# MAIN: calls all other functions 
 def main(argv):
-    options = {'weight_path'            : 'weights',
-                'source_language'       : 'en',
-                'target_language'       : 'de',
-		'k'			: 3,
-		'max_length' 		: 80,
-                "d_model"		: 512,
-                "n_layers"		: 6,
-                "heads"			: 8,
-                "dropout"		: 0.1,
-                'device'                : 1 }
+	options = {'weight_path'            : 'weights',
+				'source_language'       : 'en',
+				'target_language'       : 'de',
+				'k'						: 3,
+				'max_length' 			: 80,
+				"d_model"				: 512,
+				"n_layers"				: 6,
+				"heads"					: 8,
+				"dropout"				: 0.1,
+				'device'                : 1 }
 
-    if torch.cuda.is_available():
-        options["device"] = 0
+	if torch.cuda.is_available():
+		options["device"] = 0
 
-    SOURCE, TARGET = create_fields(options)
-    model = get_model(options, len(SOURCE.vocab), len(TARGET.vocab))
+	SOURCE, TARGET = create_fields(options)
+	model = get_model(options, len(SOURCE.vocab), len(TARGET.vocab))
+	
+	# test_sentence = 'provides a sample action list for use with job that are sent.'
+	# test_sentence = 'indicates.'                        # good
+	# test_sentence = 'I created some sample sentences for myself earlier today to practice and translate.'     # close
+	# test_sentence = 'They are English sentences, and they are for anyone who has learned'
+	# test_sentence = 'printer low on cyan, refill before printing more'
+	# test_sentence = 'printer low on black ink'
+	# test_sentence = 'low on paper, add more paper to continue'
+	# test_sentence = 'low on blue low on red printer'              # model doesn't seem to know the word low
+	# test_sentence = 'out of blue ink'         # perfect
+	# test_sentence = 'blue printer'            # perfect
+	# test_sentence = 'To go back to the main menu, click the back arrow in the upper left corner.'
+	# test_sentence = 'warning, tray two empty'             # not bad
+	# test_sentence = 'in the printer control panel, check the estimated ink levels of the ink cartridges'
 
-    # test_sentence = 'provides a sample action list for use with job that are sent to the.'
-    test_sentence = 'indicates if the printer is on.'
-    # test_sentence = 'indicates.'
-    # test_sentence = 'CMR Processing Modes'
-    
-    print('test_sentence: ' + test_sentence)
+	# test_sentence = 'indicates if the printer is on'   # good
+	# test_sentence = 'CMR Processing Modes'              # good
+	test_sentence = 'this is an interesting translation tool not sure how well it will turn out however'     # close
 
-    model.eval()
-    indexed = []
-    sentence = SOURCE.preprocess(test_sentence)
+	print('test_sentence: ' + test_sentence)
 
-    #print(sentence)
+	model.eval()
+	indexed = []
+	sentence = SOURCE.preprocess(test_sentence)
 
-    for token in sentence:
-        if SOURCE.vocab.stoi[token] != 0:
-            indexed.append(SOURCE.vocab.stoi[token])
-        else:
-            print(token)
-            print('oops')
-            quit()
-    sentence = Variable(torch.LongTensor([indexed]))
-    if options['device'] == 0:
-        sentence = sentence.cuda()
+	for token in sentence:
+		if SOURCE.vocab.stoi[token] != 0:
+			indexed.append(SOURCE.vocab.stoi[token])
+		else:
+			print(token)
+			print('oops')
+			quit()
+	sentence = Variable(torch.LongTensor([indexed]))
+	if options['device'] == 0:
+		sentence = sentence.cuda()
 
-    #print(sentence)
-    sentence = beam_search(sentence, model, SOURCE, TARGET, options)
-    #print(sentence)
+	sentence = beam_search(sentence, model, SOURCE, TARGET, options)
 
-    dictionary = {' ?' : '?',' !':'!',' .':'.','\' ':'\'',' ,':','}
-    regex = re.compile("(%s)" % "|".join(map(re.escape, dictionary.keys())))
-    print('translation: ' + str(regex.sub(lambda mo: dictionary[mo.string[mo.start():mo.end()]], sentence)))
-
+	dictionary = {' ?' : '?',' !':'!',' .':'.','\' ':'\'',' ,':','}
+	regex = re.compile("(%s)" % "|".join(map(re.escape, dictionary.keys())))
+	print('translation: ' + str(regex.sub(lambda mo: dictionary[mo.string[mo.start():mo.end()]], sentence)))
+	
 
 if __name__ == '__main__':
-        main(sys.argv)
-
-
+	main(sys.argv)

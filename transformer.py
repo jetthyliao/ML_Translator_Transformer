@@ -1,17 +1,15 @@
-#!/usr/bin/env python
-
-###########################################################################################
-#                                                                                         #
-#   CODE BY: JESSY LIAO / JOSEPH KIM / COURTNEY RICHARDSON / MATT CLOUGH                  #
-#   CSCI470: FINAL PROJECT                                                                #
-#                                                                                         #
-###########################################################################################
-
+#########################################################################################
+#																						#
+#   CODE BY: JESSY LIAO / JOSEPH KIM / COURTNEY RICHARDSON / MATT CLOUGH#				#
+#   BASE CODE FOUND HERE: https://github.com/SamLynnEvans/Transformer					#
+#   CSCI470: FINAL PROJECT																#
+#																						#
+#########################################################################################
 # For Transformer, Encoder, Decoder
 import sys
+import copy
 import torch
 import torch.nn as nn
-import copy
 
 # For Embedder, PositionalEncoder
 import math
@@ -25,6 +23,8 @@ import torch.nn.functional as F
 # MODEL
 #                                                                                       
 ###########################################################################################
+def get_clones(module, N):
+     return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
 
 # MAIN: Transformer class, calls all other class objects
 class Transformer(nn.Module):
@@ -94,16 +94,13 @@ class Decoder(nn.Module):
         for i in range(self.N):
             x = self.layers[i](x, e_outputs, source_mask, target_mask)
         return self.norm(x)
- 
-def get_clones(module, N):
-     return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
+
 
 ###########################################################################################
 #                                                                                       
 # EMBED
 #                                                                                       
 ###########################################################################################
-
 class Embedder(nn.Module):
     """
     parameters:
@@ -161,12 +158,12 @@ class PositionalEncoder(nn.Module):
         x = x + pe
         return self.dropout(x)
 
+
 ###########################################################################################
 #                                                                                       
 # LAYERS
 #                                                                                       
 ###########################################################################################
-
 class EncoderLayer(nn.Module):
     """
     parameters:
@@ -235,15 +232,14 @@ class DecoderLayer(nn.Module):
 
         return x # this is an embedding vector (now we know what the word means)
 
+
 ###########################################################################################
 #                                                                                       
 # SUB LAYERS
 #                                                                                       
 ###########################################################################################
-
 # This is just the math to calculate attention (This is a helper method for MultiHeadedAttention)
 def attention(q, k, v, d_k, mask=None, dropout=None):
-    
     scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
 
     if mask is not None: 
@@ -277,7 +273,6 @@ class MultiHeadAttention(nn.Module):
         self.out = nn.Linear(d_model, d_model)
 
     def forward(self, q, k, v, mask=None):
-
         bs = q.size(0)
 
         # perform linear operations and split into N heads
@@ -319,8 +314,6 @@ class Norm(nn.Module):
         norm = self.alpha * (x - x.mean(dim=-1, keepdim=True)) / (x.std(dim=-1, keepdim=True) + self.eps) + self.bias
         return norm
 
-
-
 class FeedForward(nn.Module): 
     def __init__(self, d_model, d_ff=2048, dropout=0.1): 
         super().__init__()
@@ -335,9 +328,7 @@ class FeedForward(nn.Module):
         if x is None:
             print("ff")
             quit()
-        # Performs reul calculation and linearizes that value and returns it
+        # Performs relu calculation and linearizes that value and returns it
         x = self.dropout(F.relu(self.linear_1(x)))
         x = self.linear_2(x)
         return x
-
-
